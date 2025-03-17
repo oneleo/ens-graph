@@ -52,6 +52,8 @@ function App() {
     };
   }
 
+  // Playground:
+  // https://cloud.hasura.io/public/graphiql?endpoint=https%3A%2F%2Fapi.thegraph.com%2Fsubgraphs%2Fname%2Fensdomains%2Fens&query=query+getDomainsForAccount+%7B%0A++domains%28%0A++++where%3A+%7Bid%3A+%220x6996a8ad70089179bc0bf29f3519f65d65359b22bb1c324c32c60020dbffe41c%22%7D%0A++++orderBy%3A+createdAt%0A++++orderDirection%3A+desc%0A++++first%3A+1%0A++%29+%7B%0A++++createdAt%0A++++owner+%7B%0A++++++domains+%7B%0A++++++++name%0A++++++++owner+%7B%0A++++++++++id%0A++++++++%7D%0A++++++%7D%0A++++%7D%0A++%7D%0A%7D%0A
   const queryDomainFromId = async (ens: string = "imtoken.eth") => {
     const name = ens.split(".");
     const nodeEth = namehash(name[1]);
@@ -85,6 +87,8 @@ function App() {
     return (await queryGraph(query, SUBGRAPH_URL)) as DomainsResponse;
   };
 
+  // Playground:
+  // https://cloud.hasura.io/public/graphiql?endpoint=https%3A%2F%2Fapi.thegraph.com%2Fsubgraphs%2Fname%2Fensdomains%2Fens&query=query+getDomainsForAccount+%7B%0A++domains%28%0A++++where%3A+%7Bname%3A+%22imtoken.eth%22%7D%0A++++orderBy%3A+createdAt%0A++++orderDirection%3A+desc%0A++++first%3A+1%0A++%29+%7B%0A++++createdAt%0A++++owner+%7B%0A++++++domains+%7B%0A++++++++name%0A++++++++owner+%7B%0A++++++++++id%0A++++++++%7D%0A++++++%7D%0A++++%7D%0A++%7D%0A%7D%0A
   const queryDomainFromName = async (
     ens: string = "imtoken.eth"
   ): Promise<DomainsResponse> => {
@@ -111,6 +115,8 @@ function App() {
     return (await queryGraph(query, SUBGRAPH_URL)) as DomainsResponse;
   };
 
+  // Playground:
+  // https://cloud.hasura.io/public/graphiql?endpoint=https%3A%2F%2Fapi.thegraph.com%2Fsubgraphs%2Fname%2Fensdomains%2Fens&query=query+getDomainsForAccount+%7B%0A++domains%28%0A++++where%3A+%7Bowner_%3A+%7Bid%3A+%220x4e88f436422075c1417357bf957764c127b2cc93%22%7D%7D%0A++++orderBy%3A+createdAt%0A++++orderDirection%3A+desc%0A++++first%3A+1%0A++%29+%7B%0A++++createdAt%0A++++owner+%7B%0A++++++domains+%7B%0A++++++++name%0A++++++++owner+%7B%0A++++++++++id%0A++++++++%7D%0A++++++%7D%0A++++%7D%0A++%7D%0A%7D%0A
   const queryDomainFromAddress = async (
     address: string = "0x4e88F436422075C1417357bF957764c127B2CC93"
   ): Promise<DomainsResponse> => {

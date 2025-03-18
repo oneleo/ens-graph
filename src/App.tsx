@@ -12,7 +12,7 @@ import {
   ContractRunner,
   getBytes,
   getBigInt,
-  getAddress,
+  hexlify,
 } from "ethers";
 
 // CORS to: https://api.thegraph.com/subgraphs/name/ensdomains/ens
@@ -44,7 +44,7 @@ export class ResolverContract {
   }
 
   public async addr(node: string, coinType: number): Promise<string> {
-    return getAddress(
+    return hexlify(
       await this.resolver.addr(getBytes(node), getBigInt(coinType))
     );
   }
@@ -53,21 +53,34 @@ export class ResolverContract {
 function App() {
   const fetchDomain = async () => {
     const ens = "imtoken.eth";
+    // const ens = "jackentropy.eth";
+    // const ens = "clankers.eth";
 
     const subdomainsResult = await querySubdomainsFromId(getNameId(ens));
-    const subdomains = subdomainsResult.data.domains.flatMap((domain) =>
-      domain.subdomains.map((subdomain) => ({
-        name: subdomain.name,
-        id: subdomain.owner.id,
-      }))
-    );
-    console.log(JSON.stringify(subdomains, null, 2));
+    const nameAddress: { name: string; id: string | null }[] = [];
 
+    subdomainsResult.data.domains.forEach((domain) => {
+      nameAddress.push({ name: domain.name, id: domain.resolvedAddress.id });
+
+      domain.subdomains.forEach((subdomain) => {
+        nameAddress.push({
+          name: subdomain.name,
+          id: subdomain.resolvedAddress ? subdomain.resolvedAddress.id : null,
+        });
+      });
+    });
+
+    console.log(JSON.stringify(nameAddress, null, 2));
     // Output:
+    //
     // [
     //   {
-    //     name: "op.imtoken.eth",
+    //     name: "imtoken.eth",
     //     id: "0x4e88f436422075c1417357bf957764c127b2cc93",
+    //   },
+    //   {
+    //     name: "op.imtoken.eth",
+    //     id: null,
     //   },
     // ];
 
@@ -80,17 +93,34 @@ function App() {
     const coinTypes = coinTypesString.map((coinType) => parseInt(coinType));
     const resolverContract = ResolverContract.init(resolver, provider);
 
-    coinTypes.forEach(async (coinType) => {
-      // Get owner from resolver contract
-      const owner = await resolverContract.addr(getNameId(ens), coinType);
-      console.log(`name: ${lookupCoinType(coinType)}\t owner: ${owner}`);
-    });
+    const recordAddress: { record: string | undefined; id: string }[] = [];
+    for (const coinType of coinTypes) {
+      // Get address from resolver contract
+      const address = await resolverContract.addr(getNameId(ens), coinType);
+      recordAddress.push({ record: lookupCoinType(coinType), id: address });
+    }
 
+    console.log(JSON.stringify(recordAddress, null, 2));
     // Output:
-    // name: eth	 owner: 0x4e88F436422075C1417357bF957764c127B2CC93
-    // name: op	 owner: 0x4e88F436422075C1417357bF957764c127B2CC93
-    // name: arb1	 owner: 0x4e88F436422075C1417357bF957764c127B2CC93
-    // name: base	 owner: 0x4e88F436422075C1417357bF957764c127B2CC93
+    //
+    // [
+    //   {
+    //     record: "eth",
+    //     id: "0x4e88f436422075c1417357bf957764c127b2cc93",
+    //   },
+    //   {
+    //     record: "op",
+    //     id: "0x4e88f436422075c1417357bf957764c127b2cc93",
+    //   },
+    //   {
+    //     record: "arb1",
+    //     id: "0x4e88f436422075c1417357bf957764c127b2cc93",
+    //   },
+    //   {
+    //     record: "base",
+    //     id: "0x4e88f436422075c1417357bf957764c127b2cc93",
+    //   },
+    // ];
   };
 
   const getNameId = (ens: string): string => {
@@ -105,29 +135,35 @@ function App() {
     );
   };
 
+  // Resolver Address type
+  type ResolverAddress = {
+    id: string | null;
+  };
+
+  // Subdomain type
+  type Subdomain = {
+    name: string;
+    resolvedAddress: ResolverAddress | null;
+  };
+
+  // Domain type
+  type Domain = {
+    name: string;
+    resolvedAddress: ResolverAddress;
+    subdomains: Subdomain[];
+  };
+
+  // The whole response type
   type Subdomains = {
     data: {
       domains: Domain[];
     };
   };
 
-  type Domain = {
-    subdomains: Subdomain[];
-  };
-
-  type Subdomain = {
-    labelName: string;
-    name: string;
-    owner: Owner;
-  };
-
-  type Owner = {
-    id: string;
-  };
-
   // Playground:
-  // https://cloud.hasura.io/public/graphiql?endpoint=https%3A%2F%2Fapi.thegraph.com%2Fsubgraphs%2Fname%2Fensdomains%2Fens&query=query+getSubdomainsFormId+%7B%0A++domains%28%0A++++where%3A+%7Bid%3A+%220x6996a8ad70089179bc0bf29f3519f65d65359b22bb1c324c32c60020dbffe41c%22%7D%0A++++orderBy%3A+createdAt%0A++++orderDirection%3A+desc%0A++%29+%7B%0A++++subdomains+%7B%0A++++++name%0A++++++labelName%0A++++++owner+%7B%0A++++++++id%0A++++++%7D%0A++++%7D%0A++%7D%0A%7D%0A
+  // https://cloud.hasura.io/public/graphiql?endpoint=https%3A%2F%2Fapi.thegraph.com%2Fsubgraphs%2Fname%2Fensdomains%2Fens&query=query+getSubdomainsFormId+%7B%0A++domains%28%0A++++where%3A+%7Bid%3A+%220x6996a8ad70089179bc0bf29f3519f65d65359b22bb1c324c32c60020dbffe41c%22%7D%0A++++orderBy%3A+createdAt%0A++++orderDirection%3A+desc%0A++%29+%7B%0A++++subdomains+%7B%0A++++++name%0A++++++resolvedAddress+%7B%0A++++++++id%0A++++++%7D%0A++++%7D%0A++++name%0A++++resolvedAddress+%7B%0A++++++id%0A++++%7D%0A++%7D%0A%7D%0A
   const querySubdomainsFromId = async (id: string): Promise<Subdomains> => {
+    // Notice: Resolved Address is NOT the Owner (= Controller)
     const query = `
 query getSubdomainsFormId {
   domains(
@@ -137,10 +173,13 @@ query getSubdomainsFormId {
   ) {
     subdomains {
       name
-      labelName
-      owner {
+      resolvedAddress {
         id
       }
+    }
+    name
+    resolvedAddress {
+      id
     }
   }
 }
@@ -185,7 +224,126 @@ query getResolverAndCoinTypesFromId {
     Object.entries(evmCoinNameToTypeMap).find(([k, v]) => v === coinType)?.[0];
 
   const evmCoinNameToTypeMap = {
+    btc: 0,
+    ltc: 2,
+    doge: 3,
+    rdd: 4,
+    dash: 5,
+    ppc: 6,
+    nmc: 7,
+    via: 14,
+    dgb: 20,
+    mona: 22,
+    dcr: 42,
+    xem: 43,
+    aib: 55,
+    sys: 57,
     eth: 60,
+    etcLegacy: 61,
+    icx: 74,
+    xvg: 77,
+    strat: 105,
+    ark: 111,
+    atom: 118,
+    zen: 121,
+    xmr: 128,
+    zec: 133,
+    lsk: 134,
+    steem: 135,
+    firo: 136,
+    rbtc: 137,
+    kmd: 141,
+    xrp: 144,
+    bch: 145,
+    xlm: 148,
+    btm: 153,
+    btg: 156,
+    nano: 165,
+    rvn: 175,
+    poaLegacy: 178,
+    lcc: 192,
+    eos: 194,
+    trx: 195,
+    bcn: 204,
+    fio: 235,
+    bsv: 236,
+    nim: 242,
+    ewtLegacy: 246,
+    algo: 283,
+    iost: 291,
+    divi: 301,
+    iotx: 304,
+    bts: 308,
+    ckb: 309,
+    zil: 313,
+    mrx: 326,
+    luna: 330,
+    dot: 354,
+    vsys: 360,
+    abbc: 367,
+    near: 397,
+    etn: 415,
+    aion: 425,
+    ksm: 434,
+    ae: 457,
+    kava: 459,
+    fil: 461,
+    ar: 472,
+    cca: 489,
+    thetaLegacy: 500,
+    sol: 501,
+    egld: 508,
+    xhv: 535,
+    flow: 539,
+    iris: 566,
+    lrg: 568,
+    sero: 569,
+    bdx: 570,
+    ccxx: 571,
+    srm: 573,
+    vlxLegacy: 574,
+    bps: 576,
+    tfuel: 589,
+    grin: 592,
+    gnoLegacy: 700,
+    bnb: 714,
+    vet: 818,
+    cloLegacy: 820,
+    hive: 825,
+    neo: 888,
+    tomoLegacy: 889,
+    hnt: 904,
+    rune: 931,
+    bcd: 999,
+    ttLegacy: 1001,
+    ftmLegacy: 1007,
+    one: 1023,
+    ont: 1024,
+    nostr: 1237,
+    xtz: 1729,
+    ada: 1815,
+    sc: 1991,
+    qtum: 2301,
+    gxc: 2303,
+    ela: 2305,
+    nas: 2718,
+    hbar: 3030,
+    iota: 4218,
+    hns: 5353,
+    stx: 5757,
+    goLegacy: 6060,
+    xch: 8444,
+    nuls: 8964,
+    avax: 9000,
+    strk: 9004,
+    nrgLegacy: 9797,
+    ardr: 16754,
+    flux: 19167,
+    celoLegacy: 52752,
+    wicc: 99999,
+    vlx: 5655640,
+    wan: 5718350,
+    waves: 5741564,
     op: 2147483658,
     cro: 2147483673,
     bsc: 2147483704,

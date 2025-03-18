@@ -164,6 +164,8 @@ function App() {
   // https://cloud.hasura.io/public/graphiql?endpoint=https%3A%2F%2Fapi.thegraph.com%2Fsubgraphs%2Fname%2Fensdomains%2Fens&query=query+getSubdomainsFormId+%7B%0A++domains%28%0A++++where%3A+%7Bid%3A+%220x6996a8ad70089179bc0bf29f3519f65d65359b22bb1c324c32c60020dbffe41c%22%7D%0A++++orderBy%3A+createdAt%0A++++orderDirection%3A+desc%0A++%29+%7B%0A++++subdomains+%7B%0A++++++name%0A++++++resolvedAddress+%7B%0A++++++++id%0A++++++%7D%0A++++%7D%0A++++name%0A++++resolvedAddress+%7B%0A++++++id%0A++++%7D%0A++%7D%0A%7D%0A
   const querySubdomainsFromId = async (id: string): Promise<Subdomains> => {
     // Notice: Resolved Address is NOT the Owner (= Controller)
+    // Default Owner/Controller is NameWrapper contract:
+    // https://etherscan.io/address/0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401
     const query = `
 query getSubdomainsFormId {
   domains(

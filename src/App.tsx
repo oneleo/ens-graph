@@ -134,7 +134,6 @@ query getSubdomainsFormId {
     where: {id: "${id.toLowerCase()}"}
     orderBy: createdAt
     orderDirection: desc
-    first: 1
   ) {
     subdomains {
       name

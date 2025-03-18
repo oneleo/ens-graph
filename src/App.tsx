@@ -123,7 +123,7 @@ function App() {
     // ];
   };
 
-  const getNameId = (ens: string): string => {
+  const getNameId = (ens: string = "imtoken.eth"): string => {
     const name = ens.split(".");
     const length = name.length;
 
